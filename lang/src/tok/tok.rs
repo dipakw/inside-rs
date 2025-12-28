@@ -105,28 +105,29 @@ static MAPPING: LazyLock<HashMap<&str, Vec<u16>>> = LazyLock::new(|| HashMap::fr
     ("\n", vec![EOL, SEP]),
 ]));
 
-pub fn id(name: &str) -> (u16, bool) {
+// Returns: ID, IS_SPARATOR, IS_MAPPED
+pub fn id(name: &str) -> (u16, bool, bool) {
     let id = MAPPING.get(name); 
 
     if id.is_none() {
         if is_ident(name) {
-            return (IDENT, false);
+            return (IDENT, false, false);
         }
         
         if is_int(name) {
-            return (INT, false);
+            return (INT, false, false);
         }
 
-        return (0, false);
+        return (0, false, false);
     }
 
     let id = id.unwrap();
 
     if id.len() > 1 {
-        return (id[0], id[1] == SEP);
+        return (id[0], id[1] == SEP, true);
     }
 
-    return (id[0], false);
+    return (id[0], false, true);
 }
 
 pub fn is_ident(tok: &str) -> bool {

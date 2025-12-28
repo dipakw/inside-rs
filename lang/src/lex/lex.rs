@@ -24,21 +24,25 @@ fn push(tokens: &mut Vec<tok::Tok>, buffer: &mut Vec<char>, ln: u32, col: u32, v
 }
 
 fn flush(tokens: &mut Vec<tok::Tok>, buffer: &mut Vec<char>, ln: u32, col: u32, str_start: bool) -> Result<(), String> {
-    let val: String = buffer.iter().collect();
+    let mut val: String = buffer.iter().collect();
     let size = val.len() as u32;
     
     if val.is_empty() {
         return Ok(());
     }
 
-    let tok: (u16, bool) = if str_start {
-        (tok::STR, false)
+    let tok: (u16, bool, bool) = if str_start {
+        (tok::STR, false, false)
     } else {
         tok::id(&val)
     };
 
     if tok.0 == 0 {
         return Err(format!("invalid token: {}", val));
+    }
+
+    if tok.2 {
+        val = "".to_string()
     }
 
     push(tokens, buffer, ln, col, val, size, tok.0);
@@ -64,7 +68,7 @@ impl<'a> Lexer<'a> {
             col += 1;
 
             let char_str = char.to_string();
-            let (id, sep) = tok::id(&char_str);
+            let (id, sep, _) = tok::id(&char_str);
 
             if str_start && str_end_if.is_some() && char != str_end_if.unwrap() {
                 buffer.push(char);
