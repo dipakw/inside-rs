@@ -16,6 +16,11 @@ pub enum Stmt {
         value: Expr,
     },
 
+    Set {
+        name: String,
+        value: Expr,
+    },
+
     If {
         cond: Expr,
         pass: Vec<Stmt>,
