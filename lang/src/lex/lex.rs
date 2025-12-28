@@ -3,7 +3,10 @@ use crate::lex::Config;
 use super::def::{Lexer, Input};
 use crate::tok;
 
-static IGNORE: [u16; 2] = [tok::SPACE, tok::TAB];
+static IGNORE: [u16; 2] = [
+    tok::SPACE,
+    tok::TAB,
+];
 
 fn push(tokens: &mut Vec<tok::Tok>, buffer: &mut Vec<char>, ln: u32, col: u32, val: String, size: u32, id: u16) {
     if IGNORE.contains(&id) {
