@@ -1,0 +1,11 @@
+[package]
+name = "inside-rs"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "inside-rs"
+path = "app/main.rs"
+
+[dependencies]
+lang = { path = "lang" }
