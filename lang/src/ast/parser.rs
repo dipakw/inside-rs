@@ -1,3 +1,4 @@
+use crate::err::*;
 use super::def::*;
 use crate::lex;
 use crate::tok;
@@ -15,7 +16,7 @@ impl<'a> Parser<'a> {
         self.stmts.push(stmt);
     }
 
-    pub fn parse(&mut self, _input: &lex::Output) -> Option<String> {
+    pub fn parse(&mut self, _input: &lex::Output) -> Option<Error> {
         self.push(Stmt::Var {
             name: "a".to_string(),
             expr: Expr::Lit {
