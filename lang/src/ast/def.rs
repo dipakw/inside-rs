@@ -4,6 +4,12 @@ pub struct Program {
     pub body: Vec<Stmt>,
 }
 
+impl Program {
+    pub fn push(&mut self, stmt: Stmt) {
+        self.body.push(stmt);
+    }
+}
+
 #[derive(Debug)]
 pub enum Stmt {
     Var {

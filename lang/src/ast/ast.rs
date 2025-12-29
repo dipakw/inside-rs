@@ -21,7 +21,7 @@ impl<'a> Ast<'a> {
             body: vec![],
         };
 
-        program.body.push(Stmt::Var {
+        program.push(Stmt::Var {
             name: "a".to_string(),
             expr: Expr::Lit {
                 id: tok::INT,
