@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+#[derive(Debug)]
 pub struct Tok {
     pub id: u16,
     pub val: String,

@@ -1,6 +1,6 @@
 use crate::lex::Config;
 
-use super::def::{Lexer, Input};
+use super::def::{Lexer, Input, Output};
 use crate::tok;
 
 static IGNORE: [u16; 2] = [
@@ -55,7 +55,7 @@ impl<'a> Lexer<'a> {
         Self { cfg: cfg }
     }
 
-    pub fn tokenize(&self, input: &Input) -> Result<Vec<tok::Tok>, String> {
+    pub fn tokenize(&self, input: &Input) -> Result<Output, String> {
         let mut tokens: Vec<tok::Tok> = vec![];
         let mut ln: u32 = 1;
         let mut col: u32 = 0;
@@ -126,6 +126,9 @@ impl<'a> Lexer<'a> {
         // Push EOF
         push(&mut tokens, &mut buffer, ln, col, "".to_string(), 0, tok::EOF);
 
-        Ok(tokens)
+        Ok(Output {
+            name: input.name.to_string(),
+            toks: tokens,
+        })
     }
 }
