@@ -8,17 +8,17 @@ pub struct Program {
 pub enum Stmt {
     Var {
         name: String,
-        value: Expr,
+        expr: Expr,
     },
 
     Fix {
         name: String,
-        value: Expr,
+        expr: Expr,
     },
 
     Set {
         name: String,
-        value: Expr,
+        expr: Expr,
     },
 
     If {

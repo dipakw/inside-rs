@@ -23,7 +23,7 @@ impl<'a> Ast<'a> {
 
         program.body.push(Stmt::Var {
             name: "a".to_string(),
-            value: Expr::Lit {
+            expr: Expr::Lit {
                 id: tok::INT,
                 val: "1".to_string(),
             },
