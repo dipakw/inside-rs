@@ -1,3 +1,17 @@
+pub struct Config {
+    pub allow: [u8; 128],
+}
+
+pub struct Ast<'a> {
+    pub cfg: &'a Config,
+}
+
+pub struct Parser<'a> {
+    pub ast: &'a Ast<'a>,
+    pub idx: usize,
+    pub stmts: Vec<Stmt>,
+}
+
 #[derive(Debug)]
 pub struct Program {
     pub name: String,
