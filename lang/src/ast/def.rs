@@ -34,7 +34,7 @@ pub enum Stmt {
 pub enum Expr {
     Bin {
         lf: Box<Expr>,
-        op: String,
+        op: u16,
         rt: Box<Expr>,
     },
 
