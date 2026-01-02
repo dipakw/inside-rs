@@ -11,12 +11,19 @@ fn push(
     buffer: &mut Vec<char>,
     ln: u32,
     col: u32,
-    val: String,
+    mut val: String,
     size: u32,
     id: u16,
 ) {
     if IGNORE.contains(&id) {
         return;
+    }
+
+    match id {
+        tok::EOL => val = "EOL".to_string(),
+        tok::SPACE => val = "SPACE".to_string(),
+        tok::TAB => val = "TAB".to_string(),
+        _ => {},
     }
 
     tokens.push(tok::Tok {

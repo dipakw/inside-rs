@@ -35,9 +35,10 @@ impl<'a> Parser<'a> {
             match tok.id {
                 tok::EOF => break,
 
-                tok::FIX | tok::VAR => {
-                    self.parse_var_fix();
-                }
+                tok::FIX | tok::VAR => match self.parse_var_fix() {
+                    Some(error) => return Some(error),
+                    None => {}
+                },
 
                 _ => {
                     return Some(self.err_unexpected_tok(0));
@@ -50,10 +51,15 @@ impl<'a> Parser<'a> {
 
     fn err_unexpected_tok(&self, off: usize) -> Error {
         let tok = &self.input.toks[self.idx + off];
+        let mut text = format!("unexpected \"{}\" ({})", tok.val, tok.id);
+
+        if tok.id == tok::EOF {
+            text = "unexpected end of file".to_string();
+        }
 
         Error {
             name: self.input.name.clone(),
-            text: format!("unexpected token: {} ({})", tok.val, tok.id),
+            text: text,
             line: tok.ln,
             colm: tok.col,
         }
@@ -201,9 +207,7 @@ impl<'a> Parser<'a> {
 
         // <bool> | <str> | <int>
         if self.peeks(0, &[tok::BOOL, tok::STR, tok::INT]) {
-            let tok = match self.grab(&[
-                &[tok::BOOL, tok::STR, tok::INT, ML],
-            ]) {
+            let tok = match self.grab(&[&[tok::BOOL, tok::STR, tok::INT, ML]]) {
                 Ok(toks) => toks[0],
                 Err(error) => return Err(error),
             };
@@ -216,9 +220,7 @@ impl<'a> Parser<'a> {
 
         // <ident>
         if self.peeks(0, &[tok::IDENT]) {
-            match self.grab(&[
-                &[tok::IDENT, ML],
-            ]) {
+            match self.grab(&[&[tok::IDENT, ML]]) {
                 Ok(toks) => return Ok(Expr::Ident(toks[0].val.clone())),
                 Err(error) => return Err(error),
             };
@@ -229,18 +231,53 @@ impl<'a> Parser<'a> {
 
     fn parse_call_expr(&mut self) -> Result<Expr, Error> {
         // Parse: <ident>(
-        let toks = match self.grab(&[
-            &[tok::IDENT, IL],
-            &[tok::LPAREN, ML],
-            &[tok::RPAREN, ML],
-        ]) {
+        let toks = match self.grab(&[&[tok::IDENT, IL], &[tok::LPAREN, ML]]) {
             Ok(toks) => toks,
             Err(error) => return Err(error),
         };
 
+        let name = toks[0].val.clone();
+
+        let args = match self.parse_val_args(tok::COMMA, tok::RPAREN) {
+            Ok(args) => args,
+            Err(error) => return Err(error),
+        };
+
         Ok(Expr::Call {
-            name: toks[0].val.clone(),
-            args: vec![],
+            name: name,
+            args: args,
         })
+    }
+
+    fn parse_val_args(&mut self, sep: u16, end: u16) -> Result<Vec<Expr>, Error> {
+        let mut args: Vec<Expr> = vec![];
+
+        while !self.peeks(0, &[end]) {
+            let expr = match self.parse_expr() {
+                Ok(expr) => expr,
+                Err(error) => return Err(error),
+            };
+
+            let mut sep_found = false;
+
+            if self.peeks(0, &[sep]) {
+                let _ = self.grab(&[&[sep, ML]]);
+                sep_found = true;
+            }
+
+            if sep_found && self.peeks(0, &[end]) {
+                return Err(self.err_unexpected_tok(0));
+            }
+
+            args.push(expr);
+        }
+
+        if !self.peeks(0, &[end]) {
+            return Err(self.err_unexpected_tok(0));
+        }
+
+        let _ = self.grab(&[&[end, ML]]);
+
+        Ok(args)
     }
 }
