@@ -195,6 +195,31 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expr(&mut self) -> Result<Expr, Error> {
+        let mut left = self.parse_expr_atom()?;
+
+        // Parse binary operators left-associatively.
+        while self.peeks(0, &BIN_OPS) {
+            let grab = &[BIN_OPS, &[ML]].concat();
+
+            let tok = match self.grab(&[grab]) {
+                Ok(toks) => toks[0],
+                Err(error) => return Err(error),
+            };
+
+            let tokid = tok.id;
+            let right = self.parse_expr_atom()?;
+
+            left = Expr::Bin {
+                lf: Box::new(left),
+                op: tokid,
+                rt: Box::new(right),
+            };
+        }
+
+        Ok(left)
+    }
+
+    fn parse_expr_atom(&mut self) -> Result<Expr, Error> {
         let mut expr: Option<Expr> = None;
 
         // Function call
@@ -242,25 +267,6 @@ impl<'a> Parser<'a> {
 
         if expr.is_none() {
             return Err(self.err_unexpected_tok(0));
-        }
-
-        // Check if there's a binary operator.
-        if self.peeks(0, &BIN_OPS) {
-            let grab = &[BIN_OPS, &[ML]].concat();
-
-            let tok = match self.grab(&[grab]) {
-                Ok(toks) => toks[0],
-                Err(error) => return Err(error),
-            };
-
-            let tokid = tok.id;
-            let right = self.parse_expr()?;
-
-            return Ok(Expr::Bin {
-                lf: Box::new(expr.unwrap()),
-                op: tokid,
-                rt: Box::new(right),
-            });
         }
 
         Ok(expr.unwrap())
