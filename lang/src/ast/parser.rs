@@ -15,12 +15,7 @@ static IL: u16 = 1;
 static ML: u16 = 2;
 
 // Binary operators.
-static BIN_OPS: &[u16] = &[
-    tok::PLUS,
-    tok::MINUS,
-    tok::MUL,
-    tok::DIV,
-];
+static BIN_OPS: &[u16] = &[tok::PLUS, tok::MINUS, tok::MUL, tok::DIV];
 
 impl<'a> Parser<'a> {
     pub fn new(ast: &'a Ast, input: &'a lex::Output) -> Self {
@@ -33,7 +28,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Option<Error> {
+    pub fn parse(&mut self) -> Result<(), Error> {
         while self.idx < self.count {
             // Skip the spaces, including line breaks.
             self.burn(&MLS);
@@ -43,19 +38,13 @@ impl<'a> Parser<'a> {
 
             match tok.id {
                 tok::EOF => break,
+                tok::FIX | tok::VAR => self.parse_var_fix()?,
 
-                tok::FIX | tok::VAR => match self.parse_var_fix() {
-                    Some(error) => return Some(error),
-                    None => {}
-                },
-
-                _ => {
-                    return Some(self.err_unexpected_tok(0));
-                }
+                _ => return Err(self.err_unexpected_tok(0)),
             }
         }
 
-        None
+        Ok(())
     }
 
     fn err_unexpected_tok(&self, off: usize) -> Error {
@@ -163,35 +152,23 @@ impl<'a> Parser<'a> {
         Ok(toks)
     }
 
-    fn parse_var_fix(&mut self) -> Option<Error> {
-        let toks = match self.grab(&[
+    fn parse_var_fix(&mut self) -> Result<(), Error> {
+        let toks = self.grab(&[
             &[tok::VAR, tok::FIX, IL],
             &[tok::IDENT, IL],
             &[tok::EQUAL, IL],
-        ]) {
-            Ok(toks) => toks,
-            Err(error) => return Some(error),
-        };
+        ])?;
 
         let (name, tok_id) = (toks[1].val.clone(), toks[0].id);
+        let expr = self.parse_expr()?;
 
-        match self.parse_expr() {
-            Ok(expr) => match tok_id {
-                tok::VAR => {
-                    self.push(Stmt::Var { name, expr });
-                }
+        match tok_id {
+            tok::VAR => self.push(Stmt::Var { name, expr }),
+            tok::FIX => self.push(Stmt::Fix { name, expr }),
+            _ => return Err(self.err_unexpected_tok(0)),
+        }
 
-                tok::FIX => {
-                    self.push(Stmt::Fix { name, expr });
-                }
-
-                _ => {}
-            },
-
-            Err(error) => return Some(error),
-        };
-
-        None
+        Ok(())
     }
 
     fn parse_expr(&mut self) -> Result<Expr, Error> {
@@ -225,10 +202,7 @@ impl<'a> Parser<'a> {
         // Function call
         // <ident>(
         if self.peeksq(0, &[tok::IDENT, tok::LPAREN]) {
-            match self.parse_call_expr() {
-                Ok(call) => expr = Some(call),
-                Err(error) => return Err(error),
-            };
+            expr = Some(self.parse_call_expr()?);
         }
 
         // Parenthesized expression
@@ -236,21 +210,13 @@ impl<'a> Parser<'a> {
         if self.peeks(0, &[tok::LPAREN]) {
             let _ = self.grab(&[&[tok::LPAREN, ML]]);
             let inner_expr = self.parse_expr()?;
-
-            let _ = match self.grab(&[&[tok::RPAREN, ML]]) {
-                Ok(_) => {},
-                Err(error) => return Err(error),
-            };
-
+            let _ = self.grab(&[&[tok::RPAREN, ML]])?;
             expr = Some(inner_expr);
         }
 
         // <int>.<int>
         if self.peeksq(0, &[tok::INT, tok::DOT, tok::INT]) {
-            let toks = match self.grab(&[&[tok::INT, IL], &[tok::DOT, IL], &[tok::INT, ML]]) {
-                Ok(toks) => toks,
-                Err(error) => return Err(error),
-            };
+            let toks = self.grab(&[&[tok::INT, IL], &[tok::DOT, IL], &[tok::INT, ML]])?;
 
             expr = Some(Expr::Lit {
                 id: tok::FLOAT,
@@ -260,10 +226,7 @@ impl<'a> Parser<'a> {
 
         // <bool> | <str> | <int>
         if self.peeks(0, &[tok::BOOL, tok::STR, tok::INT]) {
-            let tok = match self.grab(&[&[tok::BOOL, tok::STR, tok::INT, ML]]) {
-                Ok(toks) => toks[0],
-                Err(error) => return Err(error),
-            };
+            let tok = self.grab(&[&[tok::BOOL, tok::STR, tok::INT, ML]])?[0];
 
             expr = Some(Expr::Lit {
                 id: tok.id,
@@ -273,10 +236,8 @@ impl<'a> Parser<'a> {
 
         // <ident>
         if self.peeks(0, &[tok::IDENT]) {
-            match self.grab(&[&[tok::IDENT, ML]]) {
-                Ok(toks) => expr = Some(Expr::Ident(toks[0].val.clone())),
-                Err(error) => return Err(error),
-            };
+            let toks = self.grab(&[&[tok::IDENT, ML]])?;
+            expr = Some(Expr::Ident(toks[0].val.clone()));
         }
 
         if expr.is_none() {
@@ -288,17 +249,9 @@ impl<'a> Parser<'a> {
 
     fn parse_call_expr(&mut self) -> Result<Expr, Error> {
         // Parse: <ident>(
-        let toks = match self.grab(&[&[tok::IDENT, IL], &[tok::LPAREN, ML]]) {
-            Ok(toks) => toks,
-            Err(error) => return Err(error),
-        };
-
+        let toks = self.grab(&[&[tok::IDENT, IL], &[tok::LPAREN, ML]])?;
         let name = toks[0].val.clone();
-
-        let args = match self.parse_val_args(tok::COMMA, tok::RPAREN) {
-            Ok(args) => args,
-            Err(error) => return Err(error),
-        };
+        let args = self.parse_val_args(tok::COMMA, tok::RPAREN)?;
 
         Ok(Expr::Call {
             name: name,
@@ -310,10 +263,7 @@ impl<'a> Parser<'a> {
         let mut args: Vec<Expr> = vec![];
 
         while !self.peeks(0, &[end]) {
-            let expr = match self.parse_expr() {
-                Ok(expr) => expr,
-                Err(error) => return Err(error),
-            };
+            let expr = self.parse_expr()?;
 
             let mut sep_found = false;
 

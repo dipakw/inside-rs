@@ -10,10 +10,8 @@ impl<'a> Ast<'a> {
     pub fn parse(&self, input: &lex::Output) -> Result<Program, Error> {
         let mut parser = Parser::new(self, input);
 
-        match parser.parse() {
-            Some(error) => return Err(error),
-            None => {},
-        };
+        // Parse the input.
+        parser.parse()?;
 
         let program = Program {
             name: input.name.clone(),
