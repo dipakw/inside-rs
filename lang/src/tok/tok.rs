@@ -19,10 +19,12 @@ pub const INT: u16 = 102;
 pub const BOOL: u16 = 103;
 pub const STR: u16 = 104;
 pub const FLOAT: u16 = 105;
+pub const CONCAT: u16 = 106;
 
 // Keywords
 pub const FIX: u16 = 200;
 pub const VAR: u16 = 201;
+pub const NIL: u16 = 202;
 
 // Signs
 pub const EQUAL: u16 = 300;
@@ -64,13 +66,16 @@ static MAPPING: LazyLock<HashMap<&str, Vec<u16>>> = LazyLock::new(|| HashMap::fr
     ("EOF", vec![EOF, SEP]),
     ("ident", vec![IDENT]),
     ("int", vec![INT]),
-    ("bool", vec![BOOL]),
+    ("true", vec![BOOL]),
+    ("false", vec![BOOL]),
     ("str", vec![STR]),
     ("float", vec![FLOAT]),
+    ("concat", vec![CONCAT]),
     
     // Keywords
     ("fix", vec![FIX]),
     ("var", vec![VAR]),
+    ("nil", vec![NIL]),
     
     // Signs
     ("=", vec![EQUAL, SEP]),

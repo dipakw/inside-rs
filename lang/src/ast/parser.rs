@@ -9,9 +9,18 @@ static MLS: [u16; 3] = [tok::SPACE, tok::TAB, tok::EOL];
 // Inline spaces.
 static ILS: [u16; 2] = [tok::SPACE, tok::TAB];
 
+// Flags.
 static NO: u16 = 0;
 static IL: u16 = 1;
 static ML: u16 = 2;
+
+// Binary operators.
+static BIN_OPS: &[u16] = &[
+    tok::PLUS,
+    tok::MINUS,
+    tok::MUL,
+    tok::DIV,
+];
 
 impl<'a> Parser<'a> {
     pub fn new(ast: &'a Ast, input: &'a lex::Output) -> Self {
@@ -186,10 +195,15 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expr(&mut self) -> Result<Expr, Error> {
+        let mut expr: Option<Expr> = None;
+
         // Function call
         // <ident>(
         if self.peeksq(0, &[tok::IDENT, tok::LPAREN]) {
-            return self.parse_call_expr();
+            match self.parse_call_expr() {
+                Ok(call) => expr = Some(call),
+                Err(error) => return Err(error),
+            };
         }
 
         // <int>.<int>
@@ -199,7 +213,7 @@ impl<'a> Parser<'a> {
                 Err(error) => return Err(error),
             };
 
-            return Ok(Expr::Lit {
+            expr = Some(Expr::Lit {
                 id: tok::FLOAT,
                 val: format!("{}.{}", toks[0].val, toks[2].val),
             });
@@ -212,7 +226,7 @@ impl<'a> Parser<'a> {
                 Err(error) => return Err(error),
             };
 
-            return Ok(Expr::Lit {
+            expr = Some(Expr::Lit {
                 id: tok.id,
                 val: tok.val.clone(),
             });
@@ -221,12 +235,35 @@ impl<'a> Parser<'a> {
         // <ident>
         if self.peeks(0, &[tok::IDENT]) {
             match self.grab(&[&[tok::IDENT, ML]]) {
-                Ok(toks) => return Ok(Expr::Ident(toks[0].val.clone())),
+                Ok(toks) => expr = Some(Expr::Ident(toks[0].val.clone())),
                 Err(error) => return Err(error),
             };
         }
 
-        Err(self.err_unexpected_tok(0))
+        if expr.is_none() {
+            return Err(self.err_unexpected_tok(0));
+        }
+
+        // Check if there's a binary operator.
+        if self.peeks(0, &BIN_OPS) {
+            let grab = &[BIN_OPS, &[ML]].concat();
+
+            let tok = match self.grab(&[grab]) {
+                Ok(toks) => toks[0],
+                Err(error) => return Err(error),
+            };
+
+            let tokid = tok.id;
+            let right = self.parse_expr()?;
+
+            return Ok(Expr::Bin {
+                lf: Box::new(expr.unwrap()),
+                op: tokid,
+                rt: Box::new(right),
+            });
+        }
+
+        Ok(expr.unwrap())
     }
 
     fn parse_call_expr(&mut self) -> Result<Expr, Error> {
@@ -280,4 +317,7 @@ impl<'a> Parser<'a> {
 
         Ok(args)
     }
+
+    // parse_type_args
+    // parse_named_type_args
 }
