@@ -199,14 +199,12 @@ impl<'a> Parser<'a> {
     fn parse_expr_atom(&mut self) -> Result<Expr, Error> {
         let mut expr: Option<Expr> = None;
 
-        // Function call
-        // <ident>(
+        // Function call: <ident>(
         if self.peeksq(0, &[tok::IDENT, tok::LPAREN]) {
             expr = Some(self.parse_call_expr()?);
         }
 
-        // Parenthesized expression
-        // (<expr>)
+        // Parenthesized expression: (<expr>)
         if self.peeks(0, &[tok::LPAREN]) {
             let _ = self.grab(&[&[tok::LPAREN, ML]]);
             let inner_expr = self.parse_expr()?;
@@ -214,7 +212,7 @@ impl<'a> Parser<'a> {
             expr = Some(inner_expr);
         }
 
-        // <int>.<int>
+        // Float: <int>.<int>
         if self.peeksq(0, &[tok::INT, tok::DOT, tok::INT]) {
             let toks = self.grab(&[&[tok::INT, IL], &[tok::DOT, IL], &[tok::INT, ML]])?;
 
@@ -224,7 +222,7 @@ impl<'a> Parser<'a> {
             });
         }
 
-        // <bool> | <str> | <int>
+        // Literal: <bool> | <str> | <int>
         if self.peeks(0, &[tok::BOOL, tok::STR, tok::INT]) {
             let tok = self.grab(&[&[tok::BOOL, tok::STR, tok::INT, ML]])?[0];
 
@@ -234,7 +232,7 @@ impl<'a> Parser<'a> {
             });
         }
 
-        // <ident>
+        // Identifier: <ident>
         if self.peeks(0, &[tok::IDENT]) {
             let toks = self.grab(&[&[tok::IDENT, ML]])?;
             expr = Some(Expr::Ident(toks[0].val.clone()));
