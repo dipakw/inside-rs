@@ -1,14 +1,20 @@
 use crate::lex::Config;
 
-use super::def::{Lexer, Input, Output};
+use super::def::{Input, Lexer, Output};
+use crate::err::*;
 use crate::tok;
 
-static IGNORE: [u16; 2] = [
-    tok::SPACE,
-    tok::TAB,
-];
+static IGNORE: [u16; 2] = [tok::SPACE, tok::TAB];
 
-fn push(tokens: &mut Vec<tok::Tok>, buffer: &mut Vec<char>, ln: u32, col: u32, val: String, size: u32, id: u16) {
+fn push(
+    tokens: &mut Vec<tok::Tok>,
+    buffer: &mut Vec<char>,
+    ln: u32,
+    col: u32,
+    val: String,
+    size: u32,
+    id: u16,
+) {
     if IGNORE.contains(&id) {
         return;
     }
@@ -23,10 +29,16 @@ fn push(tokens: &mut Vec<tok::Tok>, buffer: &mut Vec<char>, ln: u32, col: u32, v
     *buffer = vec![];
 }
 
-fn flush(tokens: &mut Vec<tok::Tok>, buffer: &mut Vec<char>, ln: u32, col: u32, str_start: bool) -> Result<(), String> {
-    let mut val: String = buffer.iter().collect();
+fn flush(
+    tokens: &mut Vec<tok::Tok>,
+    buffer: &mut Vec<char>,
+    ln: u32,
+    col: u32,
+    str_start: bool,
+) -> Result<(), Error> {
+    let val: String = buffer.iter().collect();
     let size = val.len() as u32;
-    
+
     if val.is_empty() {
         return Ok(());
     }
@@ -38,11 +50,12 @@ fn flush(tokens: &mut Vec<tok::Tok>, buffer: &mut Vec<char>, ln: u32, col: u32, 
     };
 
     if tok.0 == 0 {
-        return Err(format!("invalid token: {}", val));
-    }
-
-    if tok.2 {
-        val = "".to_string()
+        return Err(Error {
+            name: "<input>".to_string(),
+            text: format!("unexpected token: {}", val),
+            line: ln,
+            colm: col - size,
+        });
     }
 
     push(tokens, buffer, ln, col, val, size, tok.0);
@@ -55,7 +68,7 @@ impl<'a> Lexer<'a> {
         Self { cfg: cfg }
     }
 
-    pub fn tokenize(&self, input: &Input) -> Result<Output, String> {
+    pub fn tokenize(&self, input: &Input) -> Result<Output, Error> {
         let mut tokens: Vec<tok::Tok> = vec![];
         let mut ln: u32 = 1;
         let mut col: u32 = 0;
@@ -98,7 +111,7 @@ impl<'a> Lexer<'a> {
                 flush(&mut tokens, &mut buffer, ln, col, str_start)?;
 
                 // Push the separator
-                push(&mut tokens, &mut buffer, ln, col, "".to_string(), 0, id);
+                push(&mut tokens, &mut buffer, ln, col, char_str, 0, id);
 
                 // If line break
                 if id == tok::EOL {
@@ -117,14 +130,27 @@ impl<'a> Lexer<'a> {
         // If string was started and reached the end of the file,
         // return error
         if str_start {
-            return Err("unexpected end of file".to_string());
+            return Err(Error {
+                name: "<input>".to_string(),
+                text: "unexpected end of file".to_string(),
+                line: ln,
+                colm: col,
+            });
         }
 
         // Flush buffer
         flush(&mut tokens, &mut buffer, ln, col, str_start)?;
 
         // Push EOF
-        push(&mut tokens, &mut buffer, ln, col, "".to_string(), 0, tok::EOF);
+        push(
+            &mut tokens,
+            &mut buffer,
+            ln,
+            col,
+            "".to_string(),
+            0,
+            tok::EOF,
+        );
 
         Ok(Output {
             name: input.name.to_string(),

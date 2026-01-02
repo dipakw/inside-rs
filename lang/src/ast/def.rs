@@ -1,3 +1,5 @@
+use crate::lex;
+
 pub struct Config {
     pub allow: [u8; 128],
 }
@@ -10,6 +12,8 @@ pub struct Parser<'a> {
     pub ast: &'a Ast<'a>,
     pub idx: usize,
     pub stmts: Vec<Stmt>,
+    pub input: &'a lex::Output,
+    pub count: usize,
 }
 
 #[derive(Debug)]
@@ -61,6 +65,11 @@ pub enum Expr {
     Lit {
         id: u16,
         val: String,
+    },
+    
+    Call {
+        name: String,
+        args: Vec<Expr>,
     },
 
     Ident(String),

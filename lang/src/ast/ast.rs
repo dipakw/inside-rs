@@ -8,9 +8,9 @@ impl<'a> Ast<'a> {
     }
 
     pub fn parse(&self, input: &lex::Output) -> Result<Program, Error> {
-        let mut parser = Parser::new(self);
+        let mut parser = Parser::new(self, input);
 
-        match parser.parse(input) {
+        match parser.parse() {
             Some(error) => return Err(error),
             None => {},
         };
