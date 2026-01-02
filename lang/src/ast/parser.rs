@@ -231,6 +231,20 @@ impl<'a> Parser<'a> {
             };
         }
 
+        // Parenthesized expression
+        // (<expr>)
+        if self.peeks(0, &[tok::LPAREN]) {
+            let _ = self.grab(&[&[tok::LPAREN, ML]]);
+            let inner_expr = self.parse_expr()?;
+
+            let _ = match self.grab(&[&[tok::RPAREN, ML]]) {
+                Ok(_) => {},
+                Err(error) => return Err(error),
+            };
+
+            expr = Some(inner_expr);
+        }
+
         // <int>.<int>
         if self.peeksq(0, &[tok::INT, tok::DOT, tok::INT]) {
             let toks = match self.grab(&[&[tok::INT, IL], &[tok::DOT, IL], &[tok::INT, ML]]) {
